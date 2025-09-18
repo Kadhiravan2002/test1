@@ -46,7 +46,7 @@ export default function WardenDashboard() {
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("user_id, full_name, student_id, department_id, phone, guardian_name, guardian_phone, is_approved, local_address, permanent_address, room_id, year_of_study")
-        .in("student_id", studentIds);
+        .in("user_id", studentIds);
 
       console.log("Profiles query error:", profilesError);
       console.log("Profiles data:", profiles);
@@ -54,7 +54,7 @@ export default function WardenDashboard() {
       // Manually join the data
       const requestsWithProfiles = requests?.map(request => ({
         ...request,
-        profiles: profiles?.find(profile => profile.student_id === request.student_id) || null
+        profiles: profiles?.find(profile => profile.user_id === request.student_id) || null
       })) || [];
 
       // Fetch approval history for warden actions
