@@ -30,49 +30,45 @@ export default function WardenDashboard() {
   const fetchData = async () => {
     try {
       // Try alternative approach: fetch requests and profiles separately, then join manually
-      const { data: requests, error: requestsError } = await supabase
-        .from("outing_requests")
-        .select("*")
-        .eq("current_stage", "warden")
-        .order("created_at", { ascending: false });
+      const { data: requestsWithProfiles, error: requestsError } = await supabase
+  .from("outing_requests")
+  .select(`
+    *,
+    profiles:user_id (
+      full_name,
+      student_id,
+      phone,
+      guardian_name,
+      guardian_phone,
+      is_approved,
+      department_id,
+      room_id
+    )
+  `)
+  .eq("current_stage", "warden")
+  .order("created_at", { ascending: false });
 
-      console.log("Requests query error:", requestsError);
-      console.log("Requests data:", requests);
-
-      // Get unique student IDs
-      const studentIds = requests?.map(r => r.student_id).filter(Boolean) || [];
-      
-      // Fetch profiles for these students
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, student_id, department_id, phone, guardian_name, guardian_phone, is_approved, local_address, permanent_address, room_id, year_of_study")
-        .in("user_id", studentIds);
-
-      console.log("Profiles query error:", profilesError);
-      console.log("Profiles data:", profiles);
-
-      // Manually join the data
-      const requestsWithProfiles = requests?.map(request => ({
-        ...request,
-        profiles: profiles?.find(profile => profile.user_id === request.student_id) || null
-      })) || [];
+console.log("Requests with profiles:", requestsWithProfiles);
 
       // Fetch approval history for warden actions
       const { data: history } = await supabase
-        .from("approval_history")
-        .select(`
-          *,
-          outing_requests (
-            destination,
-            outing_type,
-            from_date,
-            to_date,
-            profiles!student_id (full_name, student_id)
-          )
-        `)
-        .eq("stage", "warden")
-        .order("created_at", { ascending: false })
-        .limit(20);
+  .from("approval_history")
+  .select(`
+    *,
+    outing_requests (
+      destination,
+      outing_type,
+      from_date,
+      to_date,
+      profiles:user_id (
+        full_name,
+        student_id
+      )
+    )
+  `)
+  .eq("stage", "warden")
+  .order("created_at", { ascending: false })
+  .limit(20);
 
       // Fetch complaints
       const { data: complaintsData } = await supabase
